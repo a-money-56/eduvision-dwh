@@ -98,23 +98,49 @@ def upload_files():
             return jsonify({'statut': 'erreur', 'message': 'Aucun fichier envoyé.'}), 400
         
         files = request.files.getlist('files')
-        fichiers_recus = [f.filename for f in files]
+        fichiers_recus = {f.filename.lower() for f in files}
         
-        # Vérifier qu'on a bien les 3 fichiers attendus
-        requis = {'etudiants.xlsx', 'matieres.xlsx', 'notes.xlsx'}
-        if not requis.issubset(set(fichiers_recus)):
-            return jsonify({'statut': 'erreur', 'message': f'Fichiers manquants. Attendus: etudiants.xlsx, matieres.xlsx, notes.xlsx. Reçus: {", ".join(fichiers_recus)}'}), 400
+        # Vérification intelligente : accepte plusieurs noms pour le fichier des élèves
+        noms_possibles_eleves = {'etudiants.xlsx', 'eleves.xlsx', 'etudiant.xlsx', 'eleve.xlsx'}
+        noms_possibles_matieres = {'matieres.xlsx', 'matiere.xlsx', 'ue.xlsx'}
+        noms_possibles_notes = {'notes.xlsx', 'note.xlsx', 'evaluations.xlsx'}
+        
+        # Vérifier la présence de chaque catégorie
+        a_eleves = bool(fichiers_recus & noms_possibles_eleves)
+        a_matieres = bool(fichiers_recus & noms_possibles_matieres)
+        a_notes = bool(fichiers_recus & noms_possibles_notes)
+        
+        if not (a_eleves and a_matieres and a_notes):
+            manquants = []
+            if not a_eleves: manquants.append("Fichier des élèves (etudiants.xlsx ou eleves.xlsx)")
+            if not a_matieres: manquants.append("Fichier des matières (matieres.xlsx)")
+            if not a_notes: manquants.append("Fichier des notes (notes.xlsx)")
+            return jsonify({
+                'statut': 'erreur', 
+                'message': f"Fichiers manquants : {', '.join(manquants)}. Fichiers reçus : {', '.join(fichiers_recus)}"
+            }), 400
 
-        # Sauvegarder (écraser) les fichiers
+        # Sauvegarder les fichiers avec normalisation des noms
         for file in files:
-            if file.filename in requis:
-                file.save(os.path.join(os.getcwd(), file.filename))
+            nom_original = file.filename.lower()
+            
+            # Normalisation : renommer en noms standards attendus par l'ETL
+            if nom_original in noms_possibles_eleves:
+                nom_final = 'etudiants.xlsx'
+            elif nom_original in noms_possibles_matieres:
+                nom_final = 'matieres.xlsx'
+            elif nom_original in noms_possibles_notes:
+                nom_final = 'notes.xlsx'
+            else:
+                continue  # Ignorer les fichiers non reconnus
+            
+            file.save(os.path.join(os.getcwd(), nom_final))
 
-        # Lancer le script ETL avec les nouveaux fichiers
+        # Lancer le script ETL avec les fichiers normalisés
         resultat = subprocess.run([sys.executable, 'etl_iut.py'], capture_output=True, text=True, cwd=os.getcwd())
         
         if resultat.returncode == 0:
-            return jsonify({'statut': 'succes', 'message': 'Fichiers téléversés et Data Warehouse mis à jour avec succès !'})
+            return jsonify({'statut': 'succes', 'message': 'Fichiers téléversés, normalisés et Data Warehouse mis à jour avec succès !'})
         else:
             return jsonify({'statut': 'erreur', 'message': f'Erreur ETL : {resultat.stderr}'}), 500
             

@@ -32,8 +32,14 @@ df_notes = pd.read_excel('notes.xlsx')
 # ==========================================
 # 2.5 CORRESPONDANCE EXACTE DES COLONNES
 # ==========================================
+
 print("[INFO] Mise en correspondance des colonnes avec la base de donnees...")
 
+# 1. Renommer 'classe' en 'niveau' pour uniformiser (gère les datasets Collège/Lycée/Primaire)
+if 'classe' in df_etudiants.columns:
+    df_etudiants = df_etudiants.rename(columns={'classe': 'niveau'})
+
+# 2. Nettoyage standard des noms
 df_etudiants.columns = df_etudiants.columns.str.strip().str.lower().str.replace(' ', '_')
 df_etudiants = df_etudiants.rename(columns={'id': 'id_etudiant'})
 
@@ -41,9 +47,16 @@ df_matieres.columns = df_matieres.columns.str.strip().str.lower().str.replace(' 
 df_matieres = df_matieres.rename(columns={
     'id': 'id_matiere', 'code': 'code_ue', 'nom': 'nom_matiere', 'cat': 'categorie'
 })
+# Forcer l'ordre des colonnes pour les matières
 df_matieres = df_matieres[['id_matiere', 'code_ue', 'nom_matiere', 'credit', 'categorie']]
 
 df_notes.columns = df_notes.columns.str.strip().str.lower().str.replace(' ', '_')
+
+# 3. SÉCURITÉ ULTIME : Ne garder que les colonnes qui existent dans la BDD
+# Cela empêche TOUTE erreur "UndefinedColumn" même si l'Excel a des colonnes en trop
+colonnes_bdd_etudiant = ['id_etudiant', 'matricule', 'nom', 'prenom', 'sexe', 'age', 'region_origine', 'type_bac', 'statut_bourse', 'statut_paiement', 'niveau']
+colonnes_a_garder = [col for col in colonnes_bdd_etudiant if col in df_etudiants.columns]
+df_etudiants = df_etudiants[colonnes_a_garder]
 
 # ==========================================
 # 3. TRANSFORM (Nettoyer et preparer)
