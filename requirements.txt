@@ -1,8 +1,7 @@
-Flask==3.0.3
-flask-cors==4.0.1
+Flask==3.0.0
+flask-cors==4.0.0
 psycopg2-binary==2.9.9
-setuptools==69.5.1
-numpy==1.26.4
-pandas==2.2.2
+numpy==1.24.3
+pandas==1.5.3
 openpyxl==3.1.2
-gunicorn==22.0.0
+gunicorn==21.2.0
