@@ -1,0 +1,1 @@
+postgresql://dwh_iut_douala_db_user:PzVuXAXQat39DL1SXHR6qrASIvU527lL@dpg-db8f0k6q1p3s73ajosrg-a/dwh_iut_douala_db
