@@ -1,0 +1,38 @@
+Pour impressionner le jury de Master 2, il ne suffit pas d'avoir des jolis graphiques. Il faut montrer que tu maîtrises l'analyse multidimensionnelle (OLAP) dont ton binôme a parlé dans ses notes (Roll-up, Drill-down, Slice, Dice).
+Nous allons faire cela en deux temps : d'abord dans Power BI (visuel), puis dans PostgreSQL (SQL pour ton rapport).
+
+
+
+ÉTAPE 5 : Démontrer les capacités OLAP (Pour la soutenance)
+Partie A : Le "Drill-down" et le "Slice" dans Power BI
+Action 1 : Créer une Matrice (Pour le Drill-down / Roll-up)
+Le Drill-down permet de passer du global au détail (ex: de la Filière à la Matière).
+Dans Power BI, clique dans un espace vide.
+Dans le volet Visualisations, choisis l'icône Matrice (Matrix - elle ressemble à un tableau avec des petites flèches bleues).
+Glisse les champs suivants :
+Lignes : nom_filiere (de dim_filiere) ET nom_matiere (de dim_matiere). (Power BI va créer une hiérarchie).
+Valeurs : moyenne_finale (de fait_performance).
+Important : Clique sur la petite flèche à côté de moyenne_finale dans "Valeurs" et choisis Moyenne (et non Somme).
+Résultat : Tu as un tableau où tu peux cliquer sur le petit "+" à côté d'une filière pour voir le détail des matières. C'est exactement le Drill-down !
+Action 2 : Ajouter des Segments (Pour le Slice / Dice)
+Le Slice permet de filtrer le cube de données sur un axe précis (ex: voir uniquement les filles).
+Clique dans un espace vide.
+Dans Visualisations, choisis l'icône Segment (Slicer - un petit entonnoir avec une liste).
+Glisse le champ sexe (de dim_etudiant) dans la zone Champ.
+Fais pareil pour créer un deuxième segment avec semestre (de dim_temps).
+Résultat : Quand tu cliques sur "F" dans le segment Sexe, tous tes graphiques (ta matrice, tes barres) se recalculent instantanément pour ne montrer que les filles. C'est le Slice !
+Partie B : Les Requêtes OLAP pour ton Rapport (À mettre dans le mémoire)
+Le jury voudra voir que tu sais interroger ton DWH avec du SQL. Ouvre pgAdmin, va dans le Query Tool, et teste ces requêtes. Tu pourras faire des captures d'écran de ces requêtes et de leurs résultats pour les mettre dans ton Chapitre 4 (Résultats).
+
+Requête 1 : Opération "Roll-up" (Agrégation par Filière)
+Cette requête remonte au niveau supérieur pour voir la performance globale par filière.
+----------
+
+Requête 2 : Opération "Slice" (Analyse ciblée par Sexe)
+Cette requête "tranche" le cube de données pour comparer les performances selon le sexe.
+----------
+
+Requête 3 : Opération "Dice" (Analyse croisée Matière x Semestre)
+Cette requête prend un sous-cube en croisant deux dimensions.
+----------
+

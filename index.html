@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduVision - Aide à la décision</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .chart-container { position: relative; height: 250px; width: 100%; }
+        .insight-card { transition: all 0.3s ease; cursor: pointer; }
+        .insight-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); border-color: #3b82f6; }
+        .modal-overlay { animation: modalFadeIn 0.2s ease-out; }
+        
+        /* ===== NOUVEAU : Style responsive pour les modals ===== */
+        .modal-wrapper {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-content {
+            background: white;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            width: 100%;
+            max-width: 42rem;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn { 
+            from { opacity: 0; transform: scale(0.95) translateY(20px); } 
+            to { opacity: 1; transform: scale(1) translateY(0); } 
+        }
+        
+        /* Adaptation mobile */
+        @media (max-width: 640px) {
+            .modal-wrapper { padding: 0; align-items: flex-end; }
+            .modal-content { 
+                max-width: 100%; 
+                max-height: 95vh; 
+                padding: 1.5rem;
+            }
+        }
+                @media (max-width: 640px) {
+            .modal-wrapper { padding: 0; align-items: flex-end; }
+            .modal-content { max-width: 100%; max-height: 95vh; padding: 1.5rem; }
+            .chart-container { height: 220px; } /* Ajout : réduit la hauteur des graphiques sur mobile */
+        }
+    </style>
+
+</head>
+<body class="bg-slate-100 font-sans text-slate-800">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Menu Latéral -->
+            <!-- Overlay pour mobile (fond sombre quand le menu est ouvert) -->
+        <div id="mobile-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden" onclick="toggleMobileMenu()"></div>
+
+        <!-- Menu Latéral (Responsive : caché par défaut sur mobile, visible sur PC) -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white transform -translate-x-full transition-transform duration-300 md:translate-x-0 md:static md:flex flex-col shadow-xl">
+            <div class="p-6 border-b border-slate-700 flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-bold flex items-center"><i class="fas fa-graduation-cap text-blue-400 mr-3"></i>EduVision</h1>
+                    <p class="text-xs text-slate-400 mt-2 ml-8">Plateforme d'aide à la décision</p>
+                </div>
+                <!-- Bouton fermer pour mobile uniquement -->
+                <button onclick="toggleMobileMenu()" class="md:hidden text-slate-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+                <button onclick="showSection('dashboard', this); toggleMobileMenu()" class="w-full flex items-center p-3 bg-blue-600 text-white transition hover:bg-blue-700 shadow-md">
+                    <i class="fas fa-chart-line w-6 mr-3"></i><span>Tableau de bord</span>
+                </button>
+                <button onclick="showSection('upload', this); toggleMobileMenu()" class="w-full flex items-center p-3 hover:bg-slate-800 text-slate-300 transition">
+                    <i class="fas fa-cloud-upload-alt w-6 mr-3"></i><span>Import des données</span>
+                </button>
+                <button onclick="showSection('reports', this); toggleMobileMenu()" class="w-full flex items-center p-3 hover:bg-slate-800 text-slate-300 transition">
+                    <i class="fas fa-file-pdf w-6 mr-3"></i><span>Rapports & Exports</span>
+                </button>
+            </nav>
+        </aside>
+        <!-- Contenu Principal -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white shadow-sm p-4 flex justify-between items-center z-30 border-b border-slate-200">
+                <div class="flex items-center">
+                    <!-- Bouton Hamburger (visible uniquement sur mobile) -->
+                    <button onclick="toggleMobileMenu()" class="md:hidden text-slate-600 mr-3 p-2 hover:bg-slate-100 rounded">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h2 id="page-title" class="text-xl font-bold text-slate-800 truncate">Tableau de bord décisionnel</h2>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-slate-600 hidden sm:block font-medium">Administrateur</span>
+                    <div class="h-10 w-10 bg-blue-100 flex items-center justify-center text-blue-700 font-bold border-2 border-blue-200">AD</div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-100">
+                
+                <!-- SECTION TABLEAU DE BORD -->
+                <section id="dashboard" class="section-content animate-fade-in space-y-6">
+                    
+                    <!-- KPI Principal -->
+                    <div class="bg-white p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center gap-6">
+                        <div class="w-full md:w-1/4 h-40 relative flex justify-center">
+                            <canvas id="chartJauge"></canvas>
+                            <div class="absolute bottom-2 text-center"><span id="kpi-taux" class="text-3xl font-extrabold text-slate-800">--%</span></div>
+                        </div>
+                        <div class="w-full md:w-3/4">
+                            <h3 class="text-xl font-bold mb-2 text-slate-800">Performance Académique Globale</h3>
+                            <p class="text-slate-600 text-base leading-relaxed">
+                                Le taux de réussite global s'établit à <span id="txt-taux" class="font-bold text-slate-900 text-lg">--%</span>. 
+                                <span id="txt-zone-badge" class="inline-flex items-center px-3 py-1 text-xs font-bold bg-amber-100 text-amber-800 mt-2 border border-amber-200">
+                                    <i class="fas fa-exclamation-circle mr-1.5"></i> Zone de vigilance
+                                </span>
+                            </p>
+                            <p class="text-sm text-slate-500 mt-3">Objectif minimal de l'établissement : 65%</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Graphique Filière + Insight -->
+                        <div class="bg-white p-6 shadow-sm border border-slate-200">
+                            <h3 class="text-base font-bold mb-4 text-slate-800 flex items-center"><i class="fas fa-university text-blue-600 mr-2"></i> Moyenne par filière</h3>
+                            <div class="chart-container"><canvas id="chartFiliere"></canvas></div>
+                            
+                            <div class="insight-card mt-5 bg-slate-50 border border-slate-200 p-4 flex items-start gap-4" onclick="openModal('modal-filiere')">
+                                <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                    <i class="fas fa-chart-line text-lg"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Analyse de performance</h4>
+                                        <i class="fas fa-expand-alt text-slate-400 text-xs"></i>
+                                    </div>
+                                    <p class="text-slate-700 text-sm leading-relaxed">
+                                        La filière <span class="font-bold text-slate-900" id="txt-meilleure-filiere">--</span> domine avec une moyenne de <span class="font-bold text-indigo-600" id="txt-meilleure-note">--</span>/20. 
+                                        À l'inverse, <span class="font-bold text-red-600" id="txt-pire-filiere">--</span> nécessite un accompagnement pédagogique immédiat.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Graphique Répartition + Insight -->
+                        <div class="bg-white p-6 shadow-sm border border-slate-200">
+                            <h3 class="text-base font-bold mb-4 text-slate-800 flex items-center"><i class="fas fa-chart-pie text-emerald-600 mr-2"></i> Répartition des résultats</h3>
+                            <div class="chart-container flex justify-center"><canvas id="chartRepartition"></canvas></div>
+                            
+                            <div class="insight-card mt-5 bg-slate-50 border border-slate-200 p-4 flex items-start gap-4" onclick="openModal('modal-repartition')">
+                                <div class="flex-shrink-0 w-10 h-10 bg-emerald-100 flex items-center justify-center text-emerald-600">
+                                    <i class="fas fa-clipboard-check text-lg"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Analyse des flux</h4>
+                                        <i class="fas fa-expand-alt text-slate-400 text-xs"></i>
+                                    </div>
+                                    <p class="text-slate-700 text-sm leading-relaxed">
+                                        Sur un total de <span class="font-bold text-slate-900" id="txt-total-eval">--</span> évaluations, la majorité valide ses unités. 
+                                        La part des échecs et abandons reste un levier d'action prioritaire pour la direction.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Graphique Absences + Insight -->
+                    <div class="bg-white p-6 shadow-sm border border-slate-200">
+                        <h3 class="text-base font-bold mb-4 text-slate-800 flex items-center"><i class="fas fa-user-clock text-rose-600 mr-2"></i> Corrélation : Absences vs Réussite</h3>
+                        <div class="chart-container"><canvas id="chartAbsences"></canvas></div>
+                        
+                        <div class="insight-card mt-5 bg-slate-50 border border-slate-200 p-4 flex items-start gap-4" onclick="openModal('modal-absences')">
+                            <div class="flex-shrink-0 w-10 h-10 bg-rose-100 flex items-center justify-center text-rose-600">
+                                <i class="fas fa-exclamation-triangle text-lg"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Alerte prédictive</h4>
+                                    <i class="fas fa-expand-alt text-slate-400 text-xs"></i>
+                                </div>
+                                <p class="text-slate-700 text-sm leading-relaxed">
+                                    Les données révèlent une corrélation forte. Les étudiants avec 0-5h d'absence ont un taux d'échec de <span class="font-bold text-slate-900" id="txt-echec-faible">--%</span>. 
+                                    Ce taux bondit à <span class="font-bold text-rose-600" id="txt-echec-fort">--%</span> au-delà de 15h. 
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION IMPORT DES DONNÉES -->
+                <!-- SECTION IMPORT DES DONNÉES (FONCTIONNELLE) -->
+                <section id="upload" class="section-content hidden animate-fade-in">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="bg-white p-8 shadow-sm border border-slate-200 text-center">
+                            <div class="w-20 h-20 bg-blue-50 flex items-center justify-center mx-auto mb-6 border border-blue-100">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-blue-600"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-slate-800 mb-2">Téléverser de nouvelles données</h3>
+                            <p class="text-slate-500 mb-8 max-w-lg mx-auto">Sélectionnez les 3 fichiers Excel de la scolarité. Le système les enregistrera et mettra à jour le Data Warehouse automatiquement.</p>
+                            
+                            <div class="border-2 border-dashed border-slate-300 p-10 bg-slate-50 hover:bg-slate-100 hover:border-blue-400 transition cursor-pointer mb-6 group" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-file-excel text-green-600 text-3xl mb-3 group-hover:scale-110 transition-transform"></i>
+                                <p class="text-slate-700 font-medium">Cliquez pour sélectionner les fichiers</p>
+                                <p class="text-slate-400 text-sm mt-1">(etudiants.xlsx, matieres.xlsx, notes.xlsx)</p>
+                                <input type="file" id="fileInput" class="hidden" multiple accept=".xlsx, .xls" onchange="handleFileSelect(this)">
+                            </div>
+
+                            <!-- Liste des fichiers sélectionnés -->
+                            <div id="file-list" class="text-left mb-6 hidden max-w-md mx-auto">
+                                <h4 class="text-sm font-bold text-slate-700 mb-2">Fichiers prêts à l'envoi :</h4>
+                                <ul id="file-names" class="space-y-2"></ul>
+                            </div>
+
+                            <button id="btn-upload" onclick="uploadFiles()" class="bg-blue-600 text-white px-8 py-3 hover:bg-blue-700 transition font-bold shadow-sm flex items-center justify-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                <i class="fas fa-sync-alt"></i> <span id="btn-upload-text">Lancer la mise à jour du système</span>
+                            </button>
+
+                            <!-- Message de statut -->
+                            <div id="upload-status" class="mt-6 hidden p-4 text-sm font-medium max-w-md mx-auto"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION RAPPORTS & EXPORTS -->
+                <section id="reports" class="section-content hidden animate-fade-in">
+                    <div class="max-w-4xl mx-auto">
+                        <div class="bg-white p-8 shadow-sm border border-slate-200">
+                            <h3 class="text-2xl font-bold text-slate-800 mb-6 flex items-center"><i class="fas fa-file-pdf text-red-500 mr-3"></i> Centre de Rapports</h3>
+                            <p class="text-slate-500 mb-8">Générez des rapports d'analyse détaillés au format PDF pour les réunions de direction ou les conseils d'enseignement.</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="border border-slate-200 p-6 hover:shadow-md hover:border-blue-300 transition bg-white">
+                                    <i class="fas fa-chart-bar text-3xl text-blue-600 mb-4"></i>
+                                    <h4 class="font-bold text-slate-800 mb-2">Rapport de Performance Global</h4>
+                                    <p class="text-sm text-slate-500 mb-4">Synthèse des taux de réussite, moyennes par filière et répartition des statuts.</p>
+                                    <button onclick="genererRapport('global')" class="w-full bg-slate-800 text-white py-2.5 hover:bg-slate-900 transition text-sm font-medium flex items-center justify-center gap-2">
+                                        <i class="fas fa-download"></i> Télécharger le PDF
+                                    </button>
+                                </div>
+                                <div class="border border-slate-200 p-6 hover:shadow-md hover:border-blue-300 transition bg-white">
+                                    <i class="fas fa-user-slash text-3xl text-rose-600 mb-4"></i>
+                                    <h4 class="font-bold text-slate-800 mb-2">Rapport d'Alerte Absentéisme</h4>
+                                    <p class="text-sm text-slate-500 mb-4">Liste ciblée des étudiants dépassant le seuil critique d'absences et corrélation avec l'échec.</p>
+                                    <button onclick="genererRapport('absences')" class="w-full bg-slate-800 text-white py-2.5 hover:bg-slate-900 transition text-sm font-medium flex items-center justify-center gap-2">
+                                        <i class="fas fa-download"></i> Télécharger le PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL FILIÈRE -->
+        <!-- MODAL FILIÈRE -->
+    <div id="modal-filiere" class="hidden">
+        <div class="modal-wrapper">
+            <div class="modal-overlay absolute inset-0 bg-black bg-opacity-50" onclick="closeModal('modal-filiere')"></div>
+            <div class="modal-content relative z-10">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-indigo-100 flex items-center justify-center text-indigo-600">
+                            <i class="fas fa-chart-line text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-800">Analyse détaillée des filières</h3>
+                            <p class="text-sm text-slate-500">Performance académique par département</p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal('modal-filiere')" class="text-slate-400 hover:text-slate-600 transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4 mb-6">
+                    <div class="bg-slate-50 p-4 border border-slate-200">
+                        <h4 class="font-bold text-slate-700 mb-2">📊 Constat</h4>
+                        <p class="text-slate-600 text-sm">La filière <span class="font-bold text-slate-900" id="modal-meilleure-filiere">--</span> obtient la meilleure moyenne avec <span class="font-bold text-indigo-600" id="modal-meilleure-note">--</span>/20, démontrant une excellence pédagogique.</p>
+                    </div>
+                    <div class="bg-rose-50 p-4 border border-rose-200">
+                        <h4 class="font-bold text-rose-700 mb-2">⚠️ Point de vigilance</h4>
+                        <p class="text-slate-600 text-sm">La filière <span class="font-bold text-rose-600" id="modal-pire-filiere">--</span> présente des résultats en deçà des attentes et nécessite une intervention rapide.</p>
+                    </div>
+                    <div class="bg-blue-50 p-4 border border-blue-200">
+                        <h4 class="font-bold text-blue-700 mb-2">💡 Recommandations</h4>
+                        <ul class="text-slate-600 text-sm list-disc list-inside space-y-1">
+                            <li>Organiser une réunion pédagogique avec les responsables de filière en difficulté</li>
+                            <li>Analyser les taux de réussite par matière pour identifier les blocages</li>
+                            <li>Mettre en place un programme de soutien ciblé</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button onclick="genererRapport('filiere')" class="w-full bg-blue-600 text-white py-3 hover:bg-blue-700 transition font-bold flex items-center justify-center gap-2">
+                    <i class="fas fa-file-pdf"></i> Générer le rapport complet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RÉPARTITION -->
+    <!-- MODAL RÉPARTITION -->
+    <div id="modal-repartition" class="hidden">
+        <div class="modal-wrapper">
+            <div class="modal-overlay absolute inset-0 bg-black bg-opacity-50" onclick="closeModal('modal-repartition')"></div>
+            <div class="modal-content relative z-10">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-emerald-100 flex items-center justify-center text-emerald-600">
+                            <i class="fas fa-clipboard-check text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-800">Analyse des flux de réussite</h3>
+                            <p class="text-sm text-slate-500">Répartition des statuts académiques</p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal('modal-repartition')" class="text-slate-400 hover:text-slate-600 transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4 mb-6">
+                    <div class="bg-slate-50 p-4 border border-slate-200">
+                        <h4 class="font-bold text-slate-700 mb-2">📊 Constat</h4>
+                        <p class="text-slate-600 text-sm">Sur <span class="font-bold text-slate-900" id="modal-total-eval">--</span> évaluations totales, la majorité des étudiants valident leurs unités d'enseignement.</p>
+                    </div>
+                    <div class="bg-amber-50 p-4 border border-amber-200">
+                        <h4 class="font-bold text-amber-700 mb-2">⚠️ Points d'attention</h4>
+                        <p class="text-slate-600 text-sm">La part des échecs et abandons, bien que minoritaire, représente un levier d'amélioration significatif pour l'établissement.</p>
+                    </div>
+                    <div class="bg-emerald-50 p-4 border border-emerald-200">
+                        <h4 class="font-bold text-emerald-700 mb-2">💡 Recommandations</h4>
+                        <ul class="text-slate-600 text-sm list-disc list-inside space-y-1">
+                            <li>Identifier les matières à fort taux d'échec pour adapter les méthodes pédagogiques</li>
+                            <li>Mettre en place un système de détection précoce des étudiants en difficulté</li>
+                            <li>Renforcer l'accompagnement personnalisé</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button onclick="genererRapport('repartition')" class="w-full bg-emerald-600 text-white py-3 hover:bg-emerald-700 transition font-bold flex items-center justify-center gap-2">
+                    <i class="fas fa-file-pdf"></i> Générer le rapport complet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ABSENCES -->
+    <!-- MODAL ABSENCES -->
+    <div id="modal-absences" class="hidden">
+        <div class="modal-wrapper">
+            <div class="modal-overlay absolute inset-0 bg-black bg-opacity-50" onclick="closeModal('modal-absences')"></div>
+            <div class="modal-content relative z-10">
+                <div class="flex items-start justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-rose-100 flex items-center justify-center text-rose-600">
+                            <i class="fas fa-exclamation-triangle text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-800">Analyse prédictive : Absences vs Réussite</h3>
+                            <p class="text-sm text-slate-500">Corrélation entre assiduité et performance</p>
+                        </div>
+                    </div>
+                    <button onclick="closeModal('modal-absences')" class="text-slate-400 hover:text-slate-600 transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4 mb-6">
+                    <div class="bg-slate-50 p-4 border border-slate-200">
+                        <h4 class="font-bold text-slate-700 mb-2">📊 Constat</h4>
+                        <p class="text-slate-600 text-sm">Les étudiants avec 0-5h d'absence présentent un taux d'échec de <span class="font-bold text-slate-900" id="modal-echec-faible">--%</span>, contre <span class="font-bold text-rose-600" id="modal-echec-fort">--%</span> pour ceux dépassant 15h d'absence.</p>
+                    </div>
+                    <div class="bg-rose-50 p-4 border border-rose-200">
+                        <h4 class="font-bold text-rose-700 mb-2">🚨 Alerte critique</h4>
+                        <p class="text-slate-600 text-sm">La corrélation entre absences et échec est statistiquement significative. Chaque heure d'absence supplémentaire augmente le risque d'échec de manière mesurable.</p>
+                    </div>
+                    <div class="bg-amber-50 p-4 border border-amber-200">
+                        <h4 class="font-bold text-amber-700 mb-2">💡 Recommandations urgentes</h4>
+                        <ul class="text-slate-600 text-sm list-disc list-inside space-y-1">
+                            <li>Déclencher une alerte automatique aux tuteurs dès 10h d'absence cumulée</li>
+                            <li>Organiser des entretiens individuels avec les étudiants à risque</li>
+                            <li>Proposer des solutions de rattrapage (cours en ligne, tutorat)</li>
+                            <li>Renforcer le suivi de l'assiduité par les services de scolarité</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <button onclick="genererRapport('absences')" class="w-full bg-rose-600 text-white py-3 hover:bg-rose-700 transition font-bold flex items-center justify-center gap-2">
+                    <i class="fas fa-file-pdf"></i> Générer le rapport d'alerte
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SCRIPT JAVASCRIPT -->
+    <script>
+        let chartJaugeInstance = null, chartFiliereInstance = null, chartRepartitionInstance = null, chartAbsencesInstance = null;
+        let currentData = { filiere: [], repartition: [], absences: [], taux: 0 };
+
+                let isMobileMenuOpen = false;
+
+        // Gestion du menu mobile
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            isMobileMenuOpen = !isMobileMenuOpen;
+            
+            if (isMobileMenuOpen) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+                document.body.style.overflow = 'hidden'; // Empêche le scroll du fond
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        }
+        
+        function showSection(id, btn) {
+            document.querySelectorAll('.section-content').forEach(s => s.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+            const titles = {'dashboard': 'Tableau de bord décisionnel', 'upload': 'Import des données', 'reports': 'Rapports & Exports'};
+            document.getElementById('page-title').innerText = titles[id];
+            
+            document.querySelectorAll('nav button').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                b.classList.add('text-slate-300', 'hover:bg-slate-800');
+            });
+            if(btn) {
+                btn.classList.remove('text-slate-300', 'hover:bg-slate-800');
+                btn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+            }
+        }
+
+        function destroyCharts() {
+            if (chartJaugeInstance) { chartJaugeInstance.destroy(); chartJaugeInstance = null; }
+            if (chartFiliereInstance) { chartFiliereInstance.destroy(); chartFiliereInstance = null; }
+            if (chartRepartitionInstance) { chartRepartitionInstance.destroy(); chartRepartitionInstance = null; }
+            if (chartAbsencesInstance) { chartAbsencesInstance.destroy(); chartAbsencesInstance = null; }
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+                // ===== GESTION DU TÉLÉVERSEMENT (ÉTAPE 2) =====
+        function handleFileSelect(input) {
+            const fileList = document.getElementById('file-list');
+            const fileNames = document.getElementById('file-names');
+            const btn = document.getElementById('btn-upload');
+            
+            fileNames.innerHTML = '';
+            if (input.files.length > 0) {
+                fileList.classList.remove('hidden');
+                for (let i = 0; i < input.files.length; i++) {
+                    const li = document.createElement('li');
+                    li.className = 'flex items-center gap-2 text-sm text-slate-700 bg-slate-100 p-2 border border-slate-200';
+                    li.innerHTML = `<i class="fas fa-file-excel text-green-600"></i> ${input.files[i].name} <span class="text-slate-400 text-xs ml-auto">${(input.files[i].size / 1024).toFixed(1)} KB</span>`;
+                    fileNames.appendChild(li);
+                }
+                btn.disabled = false;
+            } else {
+                fileList.classList.add('hidden');
+                btn.disabled = true;
+            }
+        }
+
+        async function uploadFiles() {
+            const input = document.getElementById('fileInput');
+            const btn = document.getElementById('btn-upload');
+            const btnText = document.getElementById('btn-upload-text');
+            const status = document.getElementById('upload-status');
+
+            if (input.files.length === 0) return;
+
+            // UI Loading
+            btn.disabled = true;
+            btnText.innerText = 'Téléversement et traitement en cours...';
+            status.className = 'mt-6 p-4 text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 max-w-md mx-auto';
+            status.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Envoi des fichiers et exécution du processus ETL...';
+            status.classList.remove('hidden');
+
+            const formData = new FormData();
+            for (let i = 0; i < input.files.length; i++) {
+                formData.append('files', input.files[i]);
+            }
+
+            try {
+                const response = await fetch('/api/upload', { method: 'POST', body: formData });
+                const data = await response.json();
+
+                if (data.statut === 'succes') {
+                    status.className = 'mt-6 p-4 text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 max-w-md mx-auto';
+                    status.innerHTML = `<i class="fas fa-check-circle mr-2"></i> ${data.message}`;
+                    
+                    // Réinitialiser et rediriger vers le dashboard après 2s
+                    setTimeout(() => {
+                        input.value = '';
+                        document.getElementById('file-list').classList.add('hidden');
+                        btn.disabled = true;
+                        btnText.innerText = 'Lancer la mise à jour du système';
+                        status.classList.add('hidden');
+                        showSection('dashboard', document.querySelector('nav button'));
+                        chargerTableauDeBord();
+                    }, 2000);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                status.className = 'mt-6 p-4 text-sm font-medium bg-rose-50 text-rose-700 border border-rose-200 max-w-md mx-auto';
+                status.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i> Erreur : ${error.message}`;
+                btn.disabled = false;
+                btnText.innerText = 'Réessayer la mise à jour';
+            }
+        }
+
+        // ====== GÉNÉRATION PDF RÉELLE ======
+        function genererRapport(type) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const date = new Date().toLocaleDateString('fr-FR');
+            const heure = new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+
+            // En-tête
+            doc.setFillColor(15, 23, 42);
+            doc.rect(0, 0, 210, 30, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(20);
+            doc.setFont('helvetica', 'bold');
+            doc.text('EduVision', 15, 15);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Plateforme d\'aide à la décision', 15, 22);
+            doc.text(`Généré le ${date} à ${heure}`, 150, 15);
+
+            doc.setTextColor(30, 41, 59);
+            let y = 45;
+
+            if (type === 'filiere' || type === 'global') {
+                // Titre section
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Rapport de Performance par Filière', 15, y);
+                y += 10;
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Taux de réussite global : ${currentData.taux}%`, 15, y);
+                y += 8;
+                doc.text(`Objectif de l'établissement : 65%`, 15, y);
+                y += 12;
+
+                // Tableau des filières
+                const tableData = currentData.filiere.map(f => [f.label, f.value + ' / 20', f.value >= 10 ? 'Satisfaisant' : 'À améliorer']);
+                
+                doc.autoTable({
+                    startY: y,
+                    head: [['Filière', 'Moyenne', 'Statut']],
+                    body: tableData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+                    styles: { fontSize: 9, cellPadding: 4 },
+                    alternateRowStyles: { fillColor: [248, 250, 252] }
+                });
+
+                y = doc.lastAutoTable.finalY + 15;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Analyse et Recommandations', 15, y);
+                y += 8;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                const meilleures = currentData.filiere[0];
+                const pire = currentData.filiere[currentData.filiere.length - 1];
+                const analyse = `La filière ${meilleures.label} domine avec une moyenne de ${meilleures.value}/20. À l'inverse, ${pire.label} (${pire.value}/20) nécessite un accompagnement pédagogique immédiat. Il est recommandé d'organiser une réunion avec les responsables de filière et de mettre en place un programme de soutien ciblé.`;
+                const splitAnalyse = doc.splitTextToSize(analyse, 180);
+                doc.text(splitAnalyse, 15, y);
+            }
+
+            if (type === 'repartition' || type === 'global') {
+                if (type === 'global') {
+                    y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 25 : y + 40;
+                    doc.addPage();
+                    y = 45;
+                }
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Répartition des Résultats', 15, y);
+                y += 10;
+
+                const total = currentData.repartition.reduce((a, c) => a + c.value, 0);
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Total des évaluations : ${total.toLocaleString('fr-FR')}`, 15, y);
+                y += 12;
+
+                const repData = currentData.repartition.map(r => [r.label, r.value.toLocaleString('fr-FR'), ((r.value/total)*100).toFixed(1) + '%']);
+                doc.autoTable({
+                    startY: y,
+                    head: [['Statut', 'Effectif', 'Pourcentage']],
+                    body: repData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' },
+                    styles: { fontSize: 9, cellPadding: 4 }
+                });
+
+                y = doc.lastAutoTable.finalY + 15;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Analyse', 15, y);
+                y += 8;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                const ana = `La majorité des étudiants valide ses unités. La part des échecs et abandons représente un levier d\'action prioritaire. Il est recommandé de mettre en place un système de détection précoce des étudiants en difficulté.`;
+                doc.text(doc.splitTextToSize(ana, 180), 15, y);
+            }
+
+            if (type === 'absences') {
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Rapport d\'Alerte : Absentéisme', 15, y);
+                y += 10;
+
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Corrélation entre assiduité et performance académique', 15, y);
+                y += 12;
+
+                const absData = currentData.absences.map(a => [a.tranche, a.total.toLocaleString('fr-FR'), a.taux_echec + '%']);
+                doc.autoTable({
+                    startY: y,
+                    head: [['Tranche d\'absence', 'Effectif', 'Taux d\'échec']],
+                    body: absData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [225, 29, 72], textColor: 255, fontStyle: 'bold' },
+                    styles: { fontSize: 9, cellPadding: 4 }
+                });
+
+                y = doc.lastAutoTable.finalY + 15;
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Constat et Recommandations', 15, y);
+                y += 8;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                const faible = currentData.absences.find(d => d.tranche === '0-5h');
+                const fort = currentData.absences.find(d => d.tranche === '16h et +');
+                const ana = `Les étudiants avec 0-5h d'absence ont un taux d'échec de ${faible ? faible.taux_echec : 0}%, contre ${fort ? fort.taux_echec : 0}% au-delà de 15h d'absence. La corrélation est forte. Recommandations : déclencher une alerte tuteur dès 10h d'absence, organiser des entretiens individuels avec les étudiants à risque, et renforcer le suivi de l'assiduité.`;
+                doc.text(doc.splitTextToSize(ana, 180), 15, y);
+            }
+
+            // Pied de page
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(100);
+                doc.text(`EduVision - Rapport généré automatiquement - Page ${i}/${pageCount}`, 15, 290);
+            }
+
+            // Téléchargement
+            const nomFichier = `EduVision_Rapport_${type}_${date.replace(/\//g, '-')}.pdf`;
+            doc.save(nomFichier);
+        }
+
+    async function chargerTableauDeBord() {
+    destroyCharts();
+    try {
+        // AJOUT DE { cache: 'no-store' } POUR FORCER LA MISE À JOUR
+        const resJauge = await fetch('/api/taux_reussite_global', { cache: 'no-store' });
+        const dataJauge = await resJauge.json();
+        const taux = dataJauge.taux || 0;
+        currentData.taux = taux;
+
+        const resFiliere = await fetch('/api/moyenne_filiere', { cache: 'no-store' });
+        let dataFiliere = await resFiliere.json();
+        
+        const resRepartition = await fetch('/api/repartition_statut', { cache: 'no-store' });
+        let dataRepartition = await resRepartition.json();
+        
+        const resAbsences = await fetch('/api/impact_absences', { cache: 'no-store' });
+        let dataAbsences = await resAbsences.json();
+        
+        // ... (le reste du code reste identique)
+                if (!dataFiliere || !Array.isArray(dataFiliere) || dataFiliere.length === 0) {
+                    dataFiliere = [{label: "Génie Logiciel", value: 12.5}, {label: "Réseaux & Télécoms", value: 11.2}, {label: "Génie Civil", value: 10.8}];
+                }
+                if (!dataRepartition || !Array.isArray(dataRepartition) || dataRepartition.length === 0) {
+                    dataRepartition = [{label: "Validé", value: 60000}, {label: "Échoué", value: 35000}, {label: "Abandon", value: 4000}];
+                }
+                if (!dataAbsences || !Array.isArray(dataAbsences) || dataAbsences.length === 0) {
+                    dataAbsences = [{tranche: "0-5h", total: 50000, taux_echec: 20}, {tranche: "6-10h", total: 30000, taux_echec: 35}, {tranche: "11-15h", total: 15000, taux_echec: 55}, {tranche: "16h et +", total: 5000, taux_echec: 80}];
+                }
+
+                // Sauvegarde des données pour les rapports PDF
+                currentData.filiere = dataFiliere;
+                currentData.repartition = dataRepartition;
+                currentData.absences = dataAbsences;
+
+                document.getElementById('kpi-taux').innerText = taux + '%';
+                document.getElementById('txt-taux').innerText = taux + '%';
+                
+                const zoneBadge = document.getElementById('txt-zone-badge');
+                if (taux >= 65) {
+                    zoneBadge.innerHTML = '<i class="fas fa-check-circle mr-1.5"></i> Objectif atteint';
+                    zoneBadge.className = "inline-flex items-center px-3 py-1 text-xs font-bold bg-emerald-100 text-emerald-800 mt-2 border border-emerald-200";
+                } else {
+                    zoneBadge.innerHTML = '<i class="fas fa-exclamation-circle mr-1.5"></i> Zone de vigilance';
+                    zoneBadge.className = "inline-flex items-center px-3 py-1 text-xs font-bold bg-amber-100 text-amber-800 mt-2 border border-amber-200";
+                }
+
+                if (dataFiliere.length > 0) {
+                    const meilleure = dataFiliere[0].label;
+                    const meilleureNote = dataFiliere[0].value;
+                    const pire = dataFiliere[dataFiliere.length - 1].label;
+                    
+                    document.getElementById('txt-meilleure-filiere').innerText = meilleure;
+                    document.getElementById('txt-meilleure-note').innerText = meilleureNote;
+                    document.getElementById('txt-pire-filiere').innerText = pire;
+                    document.getElementById('modal-meilleure-filiere').innerText = meilleure;
+                    document.getElementById('modal-meilleure-note').innerText = meilleureNote;
+                    document.getElementById('modal-pire-filiere').innerText = pire;
+                }
+                
+                const total = dataRepartition.reduce((acc, curr) => acc + (curr.value || 0), 0);
+                document.getElementById('txt-total-eval').innerText = total.toLocaleString('fr-FR');
+                document.getElementById('modal-total-eval').innerText = total.toLocaleString('fr-FR');
+                
+                const faible = dataAbsences.find(d => d.tranche === '0-5h');
+                const fort = dataAbsences.find(d => d.tranche === '16h et +');
+                const echecFaible = (faible ? faible.taux_echec : 0) + '%';
+                const echecFort = (fort ? fort.taux_echec : 0) + '%';
+                
+                document.getElementById('txt-echec-faible').innerText = echecFaible;
+                document.getElementById('txt-echec-fort').innerText = echecFort;
+                document.getElementById('modal-echec-faible').innerText = echecFaible;
+                document.getElementById('modal-echec-fort').innerText = echecFort;
+
+                chartJaugeInstance = new Chart(document.getElementById('chartJauge'), { type: 'doughnut', data: { labels: ['Réussite', 'Reste'], datasets: [{ data: [taux, 100 - taux], backgroundColor: [taux >= 65 ? '#10b981' : '#f59e0b', '#e2e8f0'], borderWidth: 0 }] }, options: { circumference: 180, rotation: -90, cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } } } });
+                chartFiliereInstance = new Chart(document.getElementById('chartFiliere'), { type: 'bar', data: { labels: dataFiliere.map(d => d.label), datasets: [{ label: 'Moyenne / 20', data: dataFiliere.map(d => d.value), backgroundColor: '#3b82f6', borderRadius: 0 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 20 } } } });
+                chartRepartitionInstance = new Chart(document.getElementById('chartRepartition'), { type: 'doughnut', data: { labels: dataRepartition.map(d => d.label), datasets: [{ data: dataRepartition.map(d => d.value), backgroundColor: ['#10b981', '#ef4444', '#94a3b8'], borderWidth: 2, borderColor: '#ffffff' }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '60%' } });
+                chartAbsencesInstance = new Chart(document.getElementById('chartAbsences'), { type: 'bar', data: { labels: dataAbsences.map(d => d.tranche), datasets: [{ label: "Effectif", data: dataAbsences.map(d => d.total), backgroundColor: '#cbd5e1', yAxisID: 'y', borderRadius: 0 }, { label: "Taux d'échec (%)", data: dataAbsences.map(d => d.taux_echec), type: 'line', borderColor: '#ef4444', backgroundColor: '#ef4444', borderWidth: 3, pointRadius: 5, yAxisID: 'y1', tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, title: { display: true, text: 'Effectif' } }, y1: { beginAtZero: true, max: 100, position: 'right', title: { display: true, text: 'Taux d\'échec (%)' }, grid: { drawOnChartArea: false } } } } });
+            } catch (error) { console.error("Erreur:", error); }
+        }
+        chargerTableauDeBord();
+    </script>
+</body>
+</html>

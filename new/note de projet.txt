@@ -1,0 +1,35 @@
+PROBLEMATIQUE: "Dans un contexte de massification des effectifs et de dispersion des données académiques (fichiers Excel, relevés papier, systèmes hétérogènes), comment concevoir un entrepôt de données couplé à une interface web intuitive et intelligente, capable non seulement de centraliser l'information, mais aussi de traduire automatiquement des indicateurs statistiques complexes en analyses pédagogiques simplifiées, afin de faciliter la prise de décision des acteurs non-techniciens de l'enseignement supérieur ?"
+
+Pourquoi cette problématique est parfaite ?
+Elle pose le contexte (massification, données dispersées).
+Elle identifie le vrai problème (les outils actuels comme Power BI sont trop complexes pour les utilisateurs finaux non-techniciens).
+Elle propose ta solution (un DWH + une interface web qui "traduit" les chiffres en texte simple).
+
+
+
+============		===============================
+
+2. LA NOUVELLE STACK TECHNIQUE (Adaptée à la demande)
+Nous allons abandonner Power BI pour l'interface finale et le remplacer par Streamlit.
+Pourquoi Streamlit ? C'est une bibliothèque Python gratuite et open-source. Elle permet de créer une application web complète (avec upload de fichiers, graphiques interactifs, et zones de texte) en quelques lignes de code. C'est le standard actuel pour les projets de Data Science rapides et performants.
+Fonctionnement de ton application web :
+Zone d'Upload : Le personnel de l'IUT glisse-dépose ses fichiers Excel (Notes, Étudiants).
+ETL Automatique : Le Python nettoie les données en arrière-plan et les injecte dans PostgreSQL.
+Tableau de bord intelligent : Les graphiques s'affichent.
+Commentaires automatisés (L'atout majeur) : À côté de chaque graphique, l'application génère automatiquement un texte simple. Exemple : "Attention, le taux de réussite en Génie Logiciel a chuté de 12% ce semestre, principalement à cause de la matière 'Base de données' où 60% des étudiants ont échoué."
+
+
+
+==================		======================================
+3. LE NOUVEAU PLAN D'ACTION
+Voici les étapes que nous allons suivre pour satisfaire ton encadreur :
+Étape 1 : Générer la base massive. Passer à 35 000 étudiants (ce qui générera environ 1,5 million de lignes de notes sur 4 ans).
+
+Étape 2 : Mettre à jour le DWH. Vider la base et injecter ces 35 000 étudiants.
+
+Étape 3 : Développer l'Application Web (Streamlit). Créer l'interface avec upload de fichiers, graphiques et génération automatique des commentaires d'analyse.
+
+Étape 4 : Rédaction. Intégrer tout cela dans le canevas de 60 pages.
+
+
+

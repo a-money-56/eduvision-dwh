@@ -1,0 +1,7 @@
+﻿Fichier / Outil,Rôle dans le projet,Justification du choix
+`app.py`,Serveur Backend (API). Gère les connexions et les requêtes SQL.,Python + Flask" : Léger, gratuit, et permet de créer une API en quelques lignes de code. Idéal pour un prototype académique robuste."
+`psycopg2`,Bibliothèque Python de connexion à PostgreSQL.,Standard de l'industrie pour faire le pont entre Python et PostgreSQL de manière sécurisée.
+`index.html`,Interface utilisateur (Frontend). Contient la structure de la page et les graphiques.,"Format universel, lisible par tous les navigateurs sans installation."
+Chart.js,Bibliothèque JavaScript pour dessiner les graphiques.,"Gratuite, légère, et permet de créer facilement des jauges, des anneaux et des graphiques combinés (barres + lignes)."
+Tailwind CSS,Framework CSS pour le design et la mise en page.,"Permet un design moderne, épuré et "100% responsive (s'adapte parfaitement aux ordinateurs et aux téléphones mobiles) sans écrire des centaines de lignes de CSS.
+PostgreSQL,Moteur du Data Warehouse (dwh_iut_douala).,"SGBD open-source puissant, capable de gérer des requêtes analytiques (OLAP) complexes sur de grands volumes de données."

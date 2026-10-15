@@ -1,0 +1,90 @@
+
+MEMO TECHNIQUE : JOURNAL DE BORD DE L'IMPLÉMENTATION DU DWH
+
+Projet : Conception d'un Data Warehouse académique pour l'analyse des performances universitaires (IUT de Douala)
+Auteur : [Ton Nom] & [Nom du binôme]
+Date : Octobre 2026
+
+1. OBJECTIF DU DOCUMENT
+Ce document retrace les étapes techniques de la réalisation du prototype de Data Warehouse. Il détaille les choix d'architecture, les outils utilisés, ainsi que les défis techniques rencontrés et leurs résolutions. Il sert de base pour la soutenance orale.
+
+
+2. ARCHITECTURE ET CHOIX TECHNOLOGIQUES (Justifications pour le Jury)
+
+Composant
+Outil Choisi
+Justification Technique & Académique
+SGBD (Stockage)		PostgreSQL		Open-source, robuste, respect des propriétés ACID. Idéal pour gérer les jointures complexes du schéma en étoile.
+
+Méthodologie		Kimball		Approche "Bottom-up" orientée métier. Plus rapide à déployer et parfaitement adaptée à la création de tableaux de bord (Schéma en étoile).
+
+Pipeline ETL		Python (Pandas + SQLAlchemy)		Plus flexible que les outils ETL propriétaires (ex: Talend) pour un prototype. Permet un nettoyage fin des données hétérogènes.
+
+Visualisation (BI)	Power BI Desktop		Standard de l'industrie. Permet une connexion directe (DirectQuery/Import) à PostgreSQL et une restitution visuelle interactive.
+
+
+
+
+
+3. DÉROULEMENT DES OPÉRATIONS ETL (Extract, Transform, Load)
+
+Phase 1 : Extraction (Extract)
+Contexte de l'existant : Données dispersées et non structurées (fichiers Excel, relevés papier, WhatsApp).
+Action : Simulation de l'existant via des fichiers sources .xlsx (Étudiants, Matières, Notes).
+Défi : Hétérogénéité des formats et encodage.
+Solution : Utilisation de la bibliothèque pandas pour ingérer les fichiers de manière standardisée.
+
+Phase 2 : Transformation (Transform) - Le cœur du nettoyage
+C'est l'étape la plus critique pour garantir la qualité de la donnée (Data Quality).
+Nettoyage syntaxique : Uniformisation des noms de colonnes (suppression des espaces, mise en minuscules) via df.columns.str.strip().str.lower().
+Nettoyage sémantique : Harmonisation des données catégorielles (ex: transformer "MASCULIN", "Homme", "M" en une seule valeur "M").
+Calcul de mesures dérivées : Calcul automatique de la moyenne_finale et du statut (Valide/Échoue) à partir des notes brutes (CC et Examen).
+Gestion des dimensions : Création de la dimension Temps (id_temps) pour respecter la structure du schéma en étoile et éviter la redondance dans la table de faits.
+
+Phase 3 : Chargement (Load)
+Stratégie : Chargement séquentiel. Les tables de dimensions (dim_etudiant, dim_matiere, etc.) sont chargées en premier pour garantir l'intégrité référentielle avant l'insertion de la table de faits (fait_performance).
+Outil : SQLAlchemy pour mapper les DataFrames Pandas vers les tables PostgreSQL.
+
+
+4. DÉFIS TECHNIQUES RENCONTRÉS ET RÉSOLUTIONS (Très important pour le jury)
+Si le jury demande : "Quelles difficultés avez-vous rencontrées ?"
+Problème d'intégrité référentielle (Clés étrangères) :
+Erreur : psycopg2.errors.UndefinedColumn et violations de contraintes.
+Cause : Le fichier Excel de "faits" contenait des attributs de dimension (ex: annee_academique) qui n'existaient pas dans la table de faits du schéma en étoile.
+Résolution : Application du principe de normalisation du DWH. Suppression des colonnes redondantes dans le DataFrame Python avant l'insertion, en ne gardant que la clé étrangère id_temps.
+Problème d'idempotence (Doublons) :
+Erreur : UniqueViolation: la valeur d'une clé dupliquée rompt la contrainte unique.
+Cause : Exécution multiple du script ETL lors de la phase de test.
+Résolution : Mise en place d'une procédure de "Truncate before Load" (vidage des tables via la commande SQL TRUNCATE TABLE ... CASCADE) pour garantir un environnement propre à chaque exécution du pipeline.
+Problème de "Data Wrangling" (Données sales) :
+Erreur : KeyError: 'note_cc'.
+Cause : Incohérence entre les noms de colonnes du fichier source (ex: "Note CC ") et le code Python.
+Résolution : Automatisation du nettoyage des métadonnées (noms de colonnes) via les fonctions vectorielles de Pandas.
+
+
+5. MODÉLISATION DIMENSIONNELLE (Rappel Kimball)
+Notre schéma en étoile est composé de :
+
+1 Table de Faits : fait_performance (Grain : une note par étudiant, par matière, par semestre). Contient les mesures (notes, crédits, absences) et les clés étrangères.
+
+5 Tables de Dimensions :
+dim_etudiant (Qui ?)
+dim_matiere (Quoi ?)
+dim_enseignant (Par qui ?)
+dim_filiere (Dans quel cursus ?)
+dim_temps (Quand ?)
+
+
+
+6. PROCHAINES ÉTAPES (À présenter en perspective)
+
+Restitution BI : Création de dashboards interactifs sous Power BI (Taux de réussite, Analyse des abandons, Performance par filière).
+
+Requêtes OLAP : Implémentation des opérations multidimensionnelles (Roll-up, Drill-down, Slice, Dice) via des vues SQL ou des requêtes MDX/DAX.
+
+Automatisation : Mise en place d'un orchestrateur (ex: Apache Airflow) pour planifier l'exécution du script ETL de manière hebdomadaire.
+
+
+💡 Conseils pour ta soutenance :
+Ne lis pas ce document, utilise-le pour avoir les mots-clés en tête (Intégrité référentielle, Idempotence, Schéma en étoile, Kimball, ETL).
+Si on te demande pourquoi tu n'as pas utilisé un outil comme Talend : "Pour un prototype de M2 avec des sources hétérogènes et nécessitant un nettoyage spécifique, Python offre une flexibilité et une traçabilité du code bien supérieures, tout en étant un standard très recherché en entreprise."

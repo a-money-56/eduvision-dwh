@@ -1,0 +1,20 @@
+1. Objectif du Module
+
+Fournir à la direction de l'établissement une vision claire, visuelle et commentée des performances académiques, en transformant les données brutes du Data Warehouse en indicateurs d'aide à la décision (KPI).
+
+2. Architecture Choisie : Approche Modulaire (Type Micro-service)
+Nous avons séparé le "cerveau" (le traitement des données) de la "vitrine" (l'affichage visuel). Cela rend l'application plus stable, plus facile à maintenir et plus professionnelle.
+Backend (API) : Un serveur Python qui interroge la base de données et envoie les résultats au format JSON.
+Frontend (Interface) : Une page web qui récupère ces données JSON et les dessine sous forme de graphiques interactifs.
+
+3. Inventaire des Outils et Justification
+|
+|
+|
+
+4. Flux de Données (Comment ça marche ?)
+L'utilisateur ouvre la page http://127.0.0.1:5000.
+Le fichier index.html demande discrètement les données au serveur app.py (via des appels API).
+app.py exécute une requête SQL optimisée dans PostgreSQL (ex: calculer la moyenne par filière).
+PostgreSQL renvoie les chiffres à app.py, qui les formate en JSON.
+index.html reçoit le JSON et utilise Chart.js pour dessiner les graphiques et injecter les commentaires d'analyse dynamiques en langage simple.

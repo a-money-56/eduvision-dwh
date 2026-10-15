@@ -1,0 +1,21 @@
+id,niveau,nom,faculte
+1,L1,Génie Logiciel,FGI
+2,L2,Génie Logiciel,FGI
+3,L3,Génie Logiciel,FGI
+4,M1,Génie Logiciel,FGI
+5,L1,Réseaux et Télécoms,FGI
+6,L2,Réseaux et Télécoms,FGI
+7,L3,Réseaux et Télécoms,FGI
+8,M1,Réseaux et Télécoms,FGI
+9,L1,Génie Civil,FGI
+10,L2,Génie Civil,FGI
+11,L3,Génie Civil,FGI
+12,M1,Génie Civil,FGI
+13,L1,Génie Électrique,FGI
+14,L2,Génie Électrique,FGI
+15,L3,Génie Électrique,FGI
+16,M1,Génie Électrique,FGI
+17,L1,Techniques de Commercialisation,FGSE
+18,L2,Techniques de Commercialisation,FGSE
+19,L3,Techniques de Commercialisation,FGSE
+20,M1,Techniques de Commercialisation,FGSE

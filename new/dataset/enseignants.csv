@@ -1,0 +1,11 @@
+id,nom,grade,dept,anc
+101,Prof. TCHINDA,Maître de Conférences,Informatique,15
+102,Dr. MBARGA,Chargé de Cours,Informatique,8
+103,Prof. KEMAJOU,Professeur,Mathématiques,20
+104,Dr. NGUENANG,Maître Assistant,Informatique,5
+105,M. FONKAM,Vacataire,Langues,3
+106,Dr. WAMBA,Chargé de Cours,Réseaux,7
+107,Prof. DJONDE,Maître de Conférences,Génie Civil,12
+108,M. TEMGOUA,Assistant,Informatique,2
+109,Dr. KAMDEM,Maître Assistant,Génie Électrique,6
+110,Prof. NOAH,Professeur,Commerce,18

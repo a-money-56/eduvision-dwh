@@ -1,0 +1,13 @@
+id,code,nom,credit,cat
+1,INF101,Algorithmique,4,Fondamentale
+2,INF201,Base de données,6,Fondamentale
+3,INF301,Programmation Web,4,Fondamentale
+4,MTH101,Mathématiques I,4,Fondamentale
+5,MTH201,Statistiques,3,Fondamentale
+6,UO101,Anglais Technique,2,Transversale
+7,UO102,Communication,2,Transversale
+8,RT101,Réseaux Locaux,5,Fondamentale
+9,GC101,Résistance des Matériaux,5,Fondamentale
+10,GL401,Génie Logiciel Avancé,5,Fondamentale
+11,GE101,Électrotechnique,5,Fondamentale
+12,TC101,Marketing Fondamental,4,Fondamentale
